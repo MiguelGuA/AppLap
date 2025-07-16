@@ -18,7 +18,7 @@ router.post('/', autenticarToken, async (req, res) => {
     placaVehiculo,
     nombreChofer,
     dniChofer,
-    acompanantes,
+    acompanantes, 
   } = req.body;
 
   if (!fechaCita || !locatarioId) {
@@ -27,10 +27,9 @@ router.post('/', autenticarToken, async (req, res) => {
 
   const plateRegex = /^[A-Za-z0-9]{6}$/;
   if (!requiereConfirmacion && (!placaVehiculo || !plateRegex.test(placaVehiculo))) {
-    alert("La placa debe contener exactamente 6 caracteres alfanuméricos (letras y números).");
-    return;
+ 
+    return res.status(400).json({ error: "La placa debe contener exactamente 6 caracteres alfanuméricos (letras y números)." });
   }
-
 
   try {
     const fechaCitaObj = new Date(fechaCita);
@@ -66,7 +65,8 @@ router.post('/', autenticarToken, async (req, res) => {
         placaVehiculo,
         nombreChofer,
         dniChofer,
-        acompanantes,
+       
+        acompanantesJson: acompanantes,
         usuarioId: req.user.userId,
       },
     });
@@ -175,10 +175,9 @@ router.patch('/:id/confirmar', autenticarToken, async (req, res) => {
 
   const plateRegex = /^[A-Za-z0-9]{6}$/;
   if (!placaVehiculo || !plateRegex.test(placaVehiculo)) {
-    alert("La placa debe contener exactamente 6 caracteres alfanuméricos (letras y números).");
-    return;
+    
+    return res.status(400).json({ error: "La placa debe contener exactamente 6 caracteres alfanuméricos (letras y números)." });
   }
-
 
   if (userRole !== 'OPERADOR' && userRole !== 'ADMIN') {
     return res.status(403).json({ error: 'No tienes permiso para realizar esta acción.' });
@@ -191,7 +190,8 @@ router.patch('/:id/confirmar', autenticarToken, async (req, res) => {
       placaVehiculo: placaVehiculo,
       nombreChofer: nombreChofer,
       dniChofer: dniChofer,
-      acompanantes: acompanantes
+      
+      acompanantesJson: acompanantes
     };
 
     const citaConfirmada = await prisma.cita.update({
