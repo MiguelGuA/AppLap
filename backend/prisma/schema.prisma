@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id               Int             @id @default(autoincrement())
+  nombre           String
+  username         String          @unique
+  password         String
+  rol              Rol
+  activo           Boolean         @default(true)
+  citas            Cita[]
+  incidentes       Incidente[]
+  historialEstados HistorialCita[]
+  locatario        Locatario?
+}
+
+model Locatario {
+  id                    Int      @id @default(autoincrement())
+  nombre                String   // Nombre comercial
+  empresa               String   // Razón Social (puede ser el mismo que nombre)
+  ruc                   String  @unique //Se quito ? para que sea obligatorio
+  responsableLogistica  String?
+  telefonoContacto      String?
+  correoElectronico     String  @unique //mismo  caso que en ruc
+  usuarioId             Int      @unique
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+  citas                 Cita[]
+  proveedores           ProveedorPorLocatario[]
+}
+
+model Proveedor {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  ruc        String?  @unique
+  citas      Cita[]
+  locatarios ProveedorPorLocatario[]
+}
+
+model ProveedorPorLocatario {
+  proveedorId Int
+  locatarioId Int
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  locatario   Locatario @relation(fields: [locatarioId], references: [id], onDelete: Cascade)
+
+  @@id([proveedorId, locatarioId])
+}
+
+model Cita {
+  id                   Int         @id @default(autoincrement())
+  proveedorId          Int?
+  locatarioId          Int
+  descripcion          String?
+  fechaCita            DateTime
+  aceptoCondiciones    Boolean     // Campo para "Usted se compromete a usar manta oscura"
+  estado               EstadoCita  @default(PENDIENTE)
+  requiereConfirmacion Boolean     @default(false)
+  
+  // Campos de conductor y vehículo
+  placaVehiculo        String?
+  nombreChofer         String?
+  dniChofer            String?
+  
+  acompanantesJson   Json?        
+
+  // Timestamps de operación
+  horaIngreso          DateTime?
+  horaDescarga         DateTime?
+  horaFinaliza         DateTime?
+  horaSalida           DateTime?
+
+  proveedor            Proveedor?      @relation(fields: [proveedorId], references: [id])
+  locatario            Locatario       @relation(fields: [locatarioId], references: [id])
+  incidentes           Incidente[]
+  historialCita        HistorialCita[]
+  usuarioId            Int?
+  Usuario              Usuario?        @relation(fields: [usuarioId], references: [id])
+}
+
+model HistorialCita {
+  id             Int         @id @default(autoincrement())
+  citaId         Int
+  cita           Cita        @relation(fields: [citaId], references: [id])
+  usuarioId      Int
+  usuario        Usuario     @relation(fields: [usuarioId], references: [id])
+  estadoAnterior EstadoCita?
+  estadoNuevo    EstadoCita
+  fechaCambio    DateTime    @default(now())
+  observacion    String?
+
+  @@map("historial_cita")
+}
+
+model Incidente {
+  id        Int       @id @default(autoincrement())
+  citaId    Int
+  cita      Cita      @relation(fields: [citaId], references: [id])
+  creadoPor Int
+  usuario   Usuario   @relation(fields: [creadoPor], references: [id])
+  fechaHora DateTime  @default(now())
+
+  what      String
+  why       String
+  where     String
+  who       String
+  how       String
+  howMuch   String?
+  
+  archivos  Archivo[]
+}
+
+model Archivo {
+  id          Int       @id @default(autoincrement())
+  url         String
+  nombre      String
+  tipo        String
+  incidenteId Int
+  incidente   Incidente @relation(fields: [incidenteId], references: [id], onDelete: Cascade)
+}
+
+enum Rol {
+  LOCATARIO
+  OPERADOR
+  ADMIN
+}
+
+enum EstadoCita {
+  PENDIENTE
+  LLEGO
+  DESCARGANDO
+  FINALIZADO
+  RETIRADO
+}
